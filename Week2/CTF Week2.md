@@ -1,0 +1,247 @@
+---
+tags: CTF
+---
+# CTF Week2
+### 7/2
+- 第一題
+    - [sha1](http://ctf.hackersir.org:12003/)
+    - 其原始碼
+    - ![](https://i.imgur.com/Yw3oQDy.png)
+    - 這題是要實現sha1的加密漏洞，也就是碰撞攻擊
+    - 這個方法在2017年初時，被[Google破解](https://www.ithome.com.tw/news/112347)出來了
+    - 也就是這兩個PDF檔[PDF1](https://shattered.io/static/shattered-1.pdf)和[PDF2](https://shattered.io/static/shattered-2.pdf)
+    - 雖然其顏色不同，但其哈希值卻是相同的
+    - 所以我們只要讓這username和password是這兩個檔案的內容就行了
+    - 但首先我們要知道怎麼丟檔案給這個username和password
+    - 先試著隨便打一打然後丟給伺服器看看（記得打開F12）
+    - 然後會在Headers裡發現你輸入的東西，在下面的Form Data看得到![](https://i.imgur.com/TYi14VJ.png)
+    - 而這其實是Post的動作
+    - 於是我們就可以用python中requests這個模組中的Post來做這個動作
+    - 而當然免不了就要去查一下python3中如何開啟檔案內容
+    - 在經過一番攪和之後，就會得出以下程式碼
+    - 如果都沒有錯，就會出現答案了 
+    ```python3=
+    import requests
+    url = 'http://ctf.hackersir.org:12003/'
+    My_file1 = open('shattered-1.pdf','rb')
+    My_file2 = open('shattered-2.pdf','rb')
+    My_file1_txt = open('shattered-1.txt','rb')
+    My_file2_txt = open('shattered-2.txt','rb')
+    My_data = {'username':My_file1_txt.read(),'password':My_file2_txt.read()}
+    r = requests.post(url, data = My_data)
+    print(r.text)
+    ```
+    - 如果都沒有錯，就會出現答案了 
+- 第二題
+    - [Regular](https://ctf.hackersir.org/challenges#Regular)
+    - ![](https://i.imgur.com/ruBToU8.png)
+    - 簡單講，就是再考正則表達式的規則
+    - [A-Z] =>+表示所有只要是大寫的字幕或字串都可以
+    - [a-z]{2} =>表示從a到z挑一個出來，再將其重複2次
+    - [0-9] =>一樣是從0到9挑一個，重複幾次看心情，到最少一次
+    - [^A-Za-z0-9]{7,10} =>先說^的意思，如果在[]外面，代表規定從第一個字（開頭）就開始，但如果在[]裡面，代表則要與其中的規定範圍相反，所以這裡的意思就是除了字母與數字以外的數都可以，最後是{7,10}，前者是最小重複次數，後者最高重複次數
+        - 總而言之，就是要一個非字母和數字的字元，重複7到10次
+    - 最後拼湊出來放在下面就可以過了
+- 第三題
+    - [SJkcuF](https://ctf.hackersir.org/challenges#SJkcuF)
+    - 看到這個一堆\[](\)+!等，果斷開始找有這種一堆符號的加密法
+    - 所以就在一堆的加密法中找到了一個只用了[]()+!的加密法
+    - 其是JavaScript的加密法（還有另一種是一堆表情符號的）
+    - 而加密的原則在這個[網址](https://wooyun.js.org/drops/jother%E7%BC%96%E7%A0%81%E4%B9%8B%E8%B0%9C.html)有解說
+    - 說穿了就是利用不同狀態會產生不同的單字，再將其轉換為字串形式，然後在用提出第幾個字母的方法，在湊成另一個指令的單字，藉次達到加密的效果
+    - 只是這題有一個明顯很怪異的地方，再怎麼加密，都不應該產生開頭小括號是像外括，最後一個中括號也是，一開想說解碼不了可能是們害得，於是單純的修改了一下，但發現沒有用
+    - 這時看這個標題好像沒有意義，但跟JSFuck <-（這個加密法的名字）有點相似，然後就會發現，他是「相反」的
+    - 想到這，就謝了一個python，把這整串試著反過來，像這樣
+    - ![](https://i.imgur.com/4nfKMfR.png)
+    - ![](https://i.imgur.com/6cmXj5z.png)
+    - 然在拿去[解密](http://codertab.com/JsUnFuck)，或是直接放到F12裡的Console裡
+    - 你就通靈成功了
+### 7/3
+- 第四題
+    - [LFI](http://ctf.hackersir.org:10015/)
+    - 一開始進去就是一個網頁，一開始當然隨便點一點
+    - 然後你就會看到在URL上有一個page的變數
+    - 再去查這題的題目名稱時，你就會找到很多關於這個變數底下所存在的漏洞
+    - 先用為簡單的../../etc/passwd來檢查是否真有此漏洞
+    - 如果噴出像這樣的語句
+    - ![](https://i.imgur.com/IAVqxkY.png)
+    - 那基本上就是代表有這樣的漏洞了
+    - 只後有兩個方向，一個是加長../的長度
+    - 另一個是用其他的語句，像是/proc/self/environ或是/proc/self/fd
+    - 但是很可惜的，以上的方法都失敗了
+    - 於是只好再去找其他的方法
+    - 找著找著就找到了令一個方法（參考自這兩個網站）
+    - [網站一](https://blog.csdn.net/Drongin/article/details/53535873)
+    - [網站二](https://blog.csdn.net/qq_29419013/article/details/81201494)
+    - 其實就是利用其加上.php的特性，加上對的語法，就可以查看當下網頁的原始碼等
+    - 像這題如果輸入`http://ctf.hackersir.org:10015/index.php?page=php://filter/read=convert.base64-encode/resource=./index`
+    - 因為最後會加上.php，所以整體來看，他會回給你這個網頁用base64加密過後的源代碼，然後再解密，就會找到這題的答案了
+- 第五題
+    - [==1](http://ctf.hackersir.org:10016/)
+    - 進去先看原始碼，看他有什麼規則再說
+    - ![](https://i.imgur.com/3q39A85.png)
+    - 首先我們知道他跟cookie中的W16_data有關
+    - 所以當然是打開F12查看看他裡面包含什麼，又是一個加密的資料
+    - 所以就去線上找一個解碼器看看他是什麼
+    - 於是出現了以下的資料
+    - ![](https://i.imgur.com/83dW2Ap.png)
+    - 這就要說到php的序列化表示了（serialize和unserialize）
+    - 詳細的說明可以參考[這裡](https://www.php.net/manual/zh/function.serialize.php)
+    - 目前，我們知道了他把裡面的user_id設定成了int類型且數值為9
+    - 再往下看，if的地方
+    - ![](https://i.imgur.com/ZpHucJk.png)
+    - 簡言之，如果W16_data裡的user_id被設定為整數、浮點數、布林值、字串0和0.0、空值，都會重新在被設定成1到50的整數數值
+    - 而再更下要噴出flag的條件，是 （==0）
+    - 最後來說說==\=和==的差別，前著為全等，包含其數值和「型態」皆是，才會為True，而後者，只要類型經過轉換過後，數值一樣，就可以視為True
+    - 用消除法就可以得出，噴出flag的規則，只能使用字串，且數值要等於(0.0[0]+)的概念
+    - 總合以上，只要user_id="0.00"，就可以過
+    - 但最後要注意序列化的表示法，與cookie的加密法(URL Encode)
+    - 最後在拿去[加密](https://ascii.cl/url-encoding.htm)
+    - 覆蓋原本的cookie，就會拿到這題的答案了
+- 第六題
+    - [DS_Leak](http://ctf.hackersir.org:10020/)
+    - 這題要考的是DS_Store這個文件在沒有適當管理的情況下，可以被參觀此網頁的人任意下載並查看的特性
+    - DS_Store會紀錄在這個網頁下有的資料夾，且就算是使用者無權查看的也包含在裡面。
+    - 所以就在網頁後面加上/.DS_Store，可能就會下載到這樣的文件
+    - 而這題不意外的真的存在這樣的文件，然後就可以用[工具](https://github.com/gehaxelt/Python-dsstore)查看這個網頁裡所包含的資料夾了
+    - ![](https://i.imgur.com/UWP3yhZ.png)
+    - 這樣就代表有7個名稱叫f的資料夾還在這個網頁的資料夾底下
+    - 於是再進去
+    - ![](https://i.imgur.com/JearS2K.png)
+    - 哇，看起來好像失敗了，沒關係，在試著找找這個資料夾下面還有沒有DS_Store檔
+    - 果不其然
+    - ![](https://i.imgur.com/RQ4Ppkv.png)
+    - 於是你又會找到下一層的資料夾，然就就一直重複、重複
+    - ![](https://i.imgur.com/ZN40dYM.png)
+    - 最後你就會再某一層資料夾中找到你的答案了
+- 第七題
+    - [SQL_No_whitespace](http://ctf.hackersir.org:10026/)
+    - 之前做過做簡單的SQL injection，那時的語法是這樣`'or 1=1 #` ，但當我們這次再輸進去時，就不會噴出來了
+    - 於是我們看原始碼
+    - ![](https://i.imgur.com/idXwDe4.png)
+    - safe_filter做的事情就是把空白鍵直接替換成虛無
+    - 所以你的指令會變成`'or1=1#'`，想當然，這並不相等，就已進不去
+    - 但總會有東西可以表示成空白鍵的吧
+    - 於是就去Google了一下SQL的語法
+    - 後然就找到了這個[網站](http://twpug.net/docs/postgresql-doc-8.0-zh_TW/sql-syntax.html)
+    - 其中有這麼一部分如下圖
+    - ![](https://i.imgur.com/SRGiP3T.png)
+    - ![](https://i.imgur.com/v628R1V.png)
+    - 知道了這個之後，就是去找找怎麼在or和1之間放入註解
+    - 而就在同一篇文章下
+    - ![](https://i.imgur.com/3W2gQbH.png)
+    - 找到了～結合剛剛的尋找我們知道了--->**(/＊＊/=空白鍵)**
+    - 於是我們把插入的語句改成`'/**/or/**/1=1#`
+    - 答案就出來了～
+- 第八題
+    - [Git_Leak](http://ctf.hackersir.org:10022/)
+    - 這題可以其實可以配合著第六題看，一樣都是文件洩露，一個是MacOS產生的檔案被人船傳上去，另一個則是Github用於追蹤檔案更新而產生的檔案
+    - 既然都是隱藏起來的，當然就有可以讓他現行的辦法
+    - DS_Store是/.DS_Store
+    - Github是要用[工具](https://github.com/lijiejie/GitHack)去操作
+    - 測試語法如下`python GitHack.py 網址/.git`
+    :::info
+    Note：這個工具預設適用python2執行，如果用python3會有語法錯誤
+    :::
+    - 然後他會直接幫你把檔案下載在你的GitHack資料夾
+    - 在他在的資料夾打開，就會看到先前的版本了
+- 第九題
+    - [SQL_\'](http://ctf.hackersir.org:10023/)
+    - 又一題SQL injection，這是條件長這樣
+    - ![](https://i.imgur.com/rb0hfTh.png)
+    - 上次是對空白鍵做操作，這次則是對'
+    - 把'變成\\'，使其變成一個字元，就沒有功能了
+    - 貌似又要頭痛了，但其實，既然他可以讓'跳脫，那為什麼\就不能跳脫呢
+    - 什麼意思呢，我們知道在有意義的符號前面加一個\會使其跳脫成字元，那在\前面加\呢:stuck_out_tongue_winking_eye:
+    - 沒錯，也會使\變成字元的概念
+    - 那既然他多加了一個\，那我們也加個\
+    - 那原本的'-->\\'，變成了，\\'-->\\\\'
+    - 所以\的作用就會做用到他加的那個\
+    - 整體而言就變成了(`username` = '\\'or"1"="1"#)
+    - 本來''裡包含的東西，因為後面的or就變得不重要，所以username的結果，就還是會是True，也就可以成功饒過這個機制了
+- 第十題
+    - [Caesar?](https://ctf.hackersir.org/challenges#Caesar?)
+    - 這題目本身是人名，也是這個加密法的名稱，位移加密中的「凱薩加密」
+    - 加密的方法就是把本來句子裡的每個字母，都照字母表位移同一個量
+    - 所以這個可以寫一個腳本，往前或往後位移每一個字母在ASCII中的數字
+    - 但也可以直接用線上的[解密器](https://cryptii.com/pipes/caesar-cipher)
+    - 只要位移量正確，答案就會出來了
+- 第十一題
+    - [meme](https://ctf.hackersir.org/challenges#meme)
+    - 這次只有-.這兩個符號組成呢
+    - 有長有短的-和.，看起來就是長短音和節拍，實在不難想到是被說爛的摩斯密碼呢
+    - 於是也是找找看線上是不是有工具
+    - 也是很幸運的一下就[找到](https://mathsking.net/morse.htm)了
+    - 也很幸運的被我猜對了，於是答案就出來了
+### 7/4
+- 第十二題
+    - [extract](http://ctf.hackersir.org:10025/)
+    - ![](https://i.imgur.com/NrHMHYh.png)
+    - 只有一個password呢，來看看原始碼是怎麼回事
+    - ![](https://i.imgur.com/KCD9pm2.png)
+    - 恩....把password拿去做hash，然後還要跟$pass一樣
+    - 以小弟的財力，要讓這個if成立...我看還是算了吧
+    - 於是剩下的可能就落到extract這個函數上上了
+    - 之前做題目時知道，知道這個函數會把後面dictionary中的值全部再賦予一次，所以不管前面做什麼改變，經過他就會強制轉成dictionary裡所賦的值
+    - 看到這裏，就知道一件事，只要讓他強制把result改成true，那根本就不用達到if的條件，後面也就會return ture了
+    - 而後面的dictionary取值來自於$_GET
+    - 所以就是從URL上下手，只要讓$_GET包含到result，且等於ture就好了
+    - ![](https://i.imgur.com/OolOykh.png)
+    - 正當我以為這樣就好的時候
+    - 但他卻沒動，於是我只好往下看完題目（真的要好好看題目啊～）
+    - ![](https://i.imgur.com/mHgnDTZ.png)
+    - Password不能是空的啊！
+    - 於是再把password的變數放上去，像以下這樣
+    - `http://ctf.hackersir.org:10025/?result=true&password=qwe`
+    - 答案就會出來囉～
+- 第十三題
+    - [Fake_IP](http://ctf.hackersir.org:10021/)
+    - 這題一進去就會告訴你他查你的IP，因為不是localhost(127.0.0.1)
+    - 所以不能讓你進去
+    - 這時候當然去查查，怎麼改我的IP嘛
+    - [MAC正規改法](https://www.tp-link.com/tw/support/faq/287/)
+    - 恩，不能設定127呢，那還有其他的嗎
+    - [MAC網路代理](https://support.apple.com/zh-tw/guide/mac-help/mchlp2591/mac)
+    - 可以設定成127，但感覺沒什麼用
+    - [VPN](https://www.vpngate.net/cn/)呢？
+    - 並沒有人設127.0.0.1這個位置，很好
+    - 看來正常的方法都不行（好不意外）
+    - 之後只好去查查，網頁是怎麼知道你的IP嘛
+    - 然後就看到了[這個](https://devco.re/blog/2014/06/19/client-ip-detection/)
+    - 然後就會知道，誒！原來是抓header裡的X-FORWARDED-FOR喔
+    - 那就簡單啦，還不用python的get去丟丟看，看能不能偽造一個出來
+    - 程式碼如下
+    - ![](https://i.imgur.com/puojjhd.png)
+    - 結果就真的出來了WOW
+- 第十四題
+    - [🍪](http://ctf.hackersir.org:12002/)
+    - 一進去先看原始碼是常識惹
+    - ![](https://i.imgur.com/Zm0UgWz.png)
+    - 第一個if我們知道我們拿到了一個叫W2_data的cookie，且其不能是空的，不然就會被設定為一個亂數
+    - 然後這題又用到了extract這個函式了，而且if成立的情況又是看一個變數的值
+    - 可想而知，我們又要中途改變if看的變數的值了
+    - 但這次又個東西不太一樣，以前如果extract的是這樣
+    - array("a"=>"1")，那結果就是-->$a=1
+    - 但是這次要令的變數是$_SERVER['REMOTE_ADDR']，所以直接打array("REMOTE_ADDR"=>"hackersir.org")是吃不到的
+    - 因為他其實是兩層dictionary，也就是所謂的二維陣列
+    - 語法可以參考[這裡](https://codertw.com/%E7%A8%8B%E5%BC%8F%E8%AA%9E%E8%A8%80/206373/)
+    - ![](https://i.imgur.com/NkEPnSA.png)
+    - 最後就會長成如上圖所示的樣子
+    - 然後他是先base64解密在反序列，之後才會給extract作用，所以就反著做一遍
+    - 當以上都正確之後，再到W2_data給他
+    - 之後應該就能拿到這題的flag了
+- 第十五題
+    - [temporary](http://ctf.hackersir.org:10010/)
+    - temporary file暫存檔，於是開始找起了cache的檔案管理方式
+    - 但不管是去找Google快取，存放在電腦本地裡的檔案
+    - 還是用網站備份壓縮文件，ex:`/.rar`、`/.zip`、`/.html`等
+    - 都沒有起到作用，於是只好轉向關於編輯器的暫存檔
+    - 然後就會找到/index.php~、/.index.php.swp、/.index.html.swp、，這兩個用vim在編輯網頁時的漏洞
+    - 簡單來說，正常修改時會產生以上的檔案來紀錄你的改變，且會在結束時自動刪除
+    - 但如果在過程中，vim被不正常關閉，那他就會留下
+    - 而又沒有手動刪除的話，就有可能會連整個檔案一起上傳到網站
+    - 那使用者就可以藉由這些檔名去找到修改的檔案甚至是網站的內容
+    - 而這題就是要考這樣的漏洞，所以只要查看正確的檔名，就會找到flag了
+
+
+
